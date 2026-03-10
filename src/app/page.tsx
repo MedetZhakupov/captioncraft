@@ -53,6 +53,7 @@ export default function Home() {
   const [showPricing, setShowPricing] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [tone, setTone] = useState("casual");
+  const [totalGenerations, setTotalGenerations] = useState<number | null>(null);
   const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -79,6 +80,15 @@ export default function Home() {
       showToast(`${platform} caption copied!`);
     }
   };
+
+  // Fetch total generation count for social proof
+  useEffect(() => {
+    if (isSignedIn) return; // only show on landing page
+    fetch("/api/stats")
+      .then((res) => res.json())
+      .then((data) => setTotalGenerations(data.generations))
+      .catch(() => {});
+  }, [isSignedIn]);
 
   // Fetch credits from server when signed in
   useEffect(() => {
@@ -385,12 +395,50 @@ export default function Home() {
                 </div>
               ))}
             </div>
-            <div className="text-center">
+            {/* Sample Output */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-slate-400 text-center">Example output</p>
+              <div className="rounded-xl border border-slate-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-900">
+                <div className="bg-gradient-to-r from-pink-500 to-purple-500 px-4 py-2 flex items-center justify-between">
+                  <span className="text-white font-medium text-sm flex items-center gap-2">
+                    <span>📸</span> Instagram
+                  </span>
+                  <span className="text-white/70 text-xs">847/2200 chars</span>
+                </div>
+                <div className="p-4">
+                  <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+                    Still can&apos;t believe this is real. ✨ From concept to launch in 30 days — proof that big dreams don&apos;t need big timelines. Drop a 🔥 if you&apos;re building something too.
+                  </p>
+                  <p className="text-xs text-slate-400 mt-2">#buildinpublic #startup #launch</p>
+                </div>
+              </div>
+              <div className="rounded-xl border border-slate-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-900">
+                <div className="bg-gradient-to-r from-gray-800 to-black px-4 py-2 flex items-center justify-between">
+                  <span className="text-white font-medium text-sm flex items-center gap-2">
+                    <span>𝕏</span> Twitter/X
+                  </span>
+                  <span className="text-white/70 text-xs">128/280 chars</span>
+                </div>
+                <div className="p-4">
+                  <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+                    30 days from idea to launch. No funding, no team, just shipping. Here&apos;s the screenshot to prove it.
+                  </p>
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-400 text-center">+ LinkedIn, TikTok, and Facebook captions</p>
+            </div>
+
+            <div className="text-center space-y-3">
               <SignInButton mode="modal">
                 <button className="bg-gradient-to-r from-violet-600 to-pink-500 hover:from-violet-700 hover:to-pink-600 text-white rounded-xl px-8 py-3.5 font-semibold transition-all active:scale-[0.98] text-base">
                   Get started — 3 free credits
                 </button>
               </SignInButton>
+              {totalGenerations !== null && totalGenerations > 0 && (
+                <p className="text-xs text-slate-400">
+                  {totalGenerations.toLocaleString()}+ captions generated
+                </p>
+              )}
             </div>
           </div>
         )}

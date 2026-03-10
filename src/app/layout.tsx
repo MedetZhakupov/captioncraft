@@ -23,7 +23,21 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "CaptionCraft — AI Captions for Every Platform",
   description:
-    "Upload a screenshot and get 5 platform-optimized captions instantly. Built for creators.",
+    "Upload a screenshot and get 5 platform-optimized captions instantly. Instagram, LinkedIn, TikTok, Twitter/X, and Facebook — one click, five captions.",
+  metadataBase: new URL("https://captioncraft.co"),
+  openGraph: {
+    title: "CaptionCraft — AI Captions for Every Platform",
+    description:
+      "Upload a screenshot and get 5 platform-optimized captions instantly. Built for creators.",
+    type: "website",
+    siteName: "CaptionCraft",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "CaptionCraft — AI Captions for Every Platform",
+    description:
+      "One screenshot. Five platforms. Instant captions.",
+  },
 };
 
 export default function RootLayout({

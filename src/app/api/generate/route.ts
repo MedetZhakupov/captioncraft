@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { auth } from "@clerk/nextjs/server";
+import { Redis } from "@upstash/redis";
 import { deductCredit } from "@/lib/credits";
 import { saveGeneration } from "@/lib/db";
 import { getGenerationLimiter } from "@/lib/ratelimit";
@@ -9,6 +10,13 @@ const client = new Anthropic();
 
 const PLATFORMS = ["Instagram", "LinkedIn", "TikTok", "Twitter/X", "Facebook"];
 const VALID_TONES = ["professional", "casual", "witty", "bold", "inspirational"];
+const ALLOWED_MEDIA_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+];
+const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB decoded
 
 const TONE_INSTRUCTIONS: Record<string, string> = {
   professional: "Use a polished, professional tone. Focus on credibility, value, and clear messaging.",
@@ -39,6 +47,23 @@ export async function POST(req: NextRequest) {
     if (!image || !mediaType) {
       return NextResponse.json(
         { error: "Image and media type are required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate media type against allowlist
+    if (!ALLOWED_MEDIA_TYPES.includes(mediaType)) {
+      return NextResponse.json(
+        { error: "Unsupported image format. Allowed: JPEG, PNG, GIF, WebP." },
+        { status: 400 }
+      );
+    }
+
+    // Validate base64 payload size (base64 is ~4/3 of original)
+    const estimatedBytes = Math.ceil((image.length * 3) / 4);
+    if (estimatedBytes > MAX_IMAGE_SIZE_BYTES) {
+      return NextResponse.json(
+        { error: "Image too large. Maximum size is 10MB." },
         { status: 400 }
       );
     }
@@ -114,6 +139,13 @@ Respond ONLY with valid JSON in this exact format, no markdown:
     );
 
     await saveGeneration(userId, parsed.summary, parsed.captions);
+
+    // Increment global generation counter (fire-and-forget)
+    const redis = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL!,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+    });
+    redis.incr("stats:generations").catch(() => {});
 
     return NextResponse.json({ ...parsed, credits: remainingCredits });
   } catch (error) {
