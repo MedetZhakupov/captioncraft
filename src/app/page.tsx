@@ -454,8 +454,8 @@ export default function Home() {
               <button
                 onClick={async () => {
                   try {
-                    // Try Clipboard API first (works on desktop Chrome/Firefox)
                     const items = await navigator.clipboard.read();
+                    // Try direct image blob first
                     for (const item of items) {
                       const imageType = item.types.find((t) => t.startsWith("image/"));
                       if (imageType) {
@@ -465,10 +465,27 @@ export default function Home() {
                         return;
                       }
                     }
-                    showToast("No image found in clipboard");
+                    // Try extracting image URL from HTML content (mobile browsers copy images as HTML)
+                    for (const item of items) {
+                      if (item.types.includes("text/html")) {
+                        const htmlBlob = await item.getType("text/html");
+                        const html = await htmlBlob.text();
+                        const match = html.match(/<img[^>]+src="([^"]+)"/i);
+                        if (match?.[1]) {
+                          showToast("Loading image...");
+                          const res = await fetch(match[1]);
+                          const blob = await res.blob();
+                          if (blob.type.startsWith("image/")) {
+                            const file = new File([blob], "pasted-image", { type: blob.type });
+                            processFile(file);
+                            return;
+                          }
+                        }
+                      }
+                    }
+                    showToast("No image found — try saving it to Photos first");
                   } catch {
-                    // Clipboard API blocked (iOS Safari) — prompt user
-                    showToast("Copy an image first, then tap here again");
+                    showToast("Could not paste — try saving the image first, then upload");
                   }
                 }}
                 className="w-full mt-3 py-2.5 rounded-xl border border-slate-200 dark:border-gray-700 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
