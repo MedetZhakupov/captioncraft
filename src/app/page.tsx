@@ -450,9 +450,34 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-              <p className="text-center text-xs text-slate-400 mt-2 hidden sm:block">
-                Or paste a screenshot with Ctrl+V / Cmd+V
-              </p>
+              {/* Paste from clipboard */}
+              <button
+                onClick={async () => {
+                  try {
+                    // Try Clipboard API first (works on desktop Chrome/Firefox)
+                    const items = await navigator.clipboard.read();
+                    for (const item of items) {
+                      const imageType = item.types.find((t) => t.startsWith("image/"));
+                      if (imageType) {
+                        const blob = await item.getType(imageType);
+                        const file = new File([blob], "pasted-image", { type: imageType });
+                        processFile(file);
+                        return;
+                      }
+                    }
+                    showToast("No image found in clipboard");
+                  } catch {
+                    // Clipboard API blocked (iOS Safari) — prompt user
+                    showToast("Copy an image first, then tap here again");
+                  }
+                }}
+                className="w-full mt-3 py-2.5 rounded-xl border border-slate-200 dark:border-gray-700 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                Paste from clipboard
+              </button>
             </>
           ) : (
             <div className="space-y-4 animate-fade-in">
