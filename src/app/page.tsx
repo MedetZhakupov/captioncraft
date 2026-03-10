@@ -231,9 +231,7 @@ export default function Home() {
       setResult({ captions: data.captions, summary: data.summary });
       if (data.credits !== undefined) setCredits(data.credits);
     } catch (err) {
-      console.error("Generate error:", err);
-      const message = err instanceof Error ? err.message : "Something went wrong";
-      setError(message);
+      setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
     }
