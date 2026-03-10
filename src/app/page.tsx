@@ -66,23 +66,26 @@ export default function Home() {
     if (navigator.vibrate) navigator.vibrate(10);
   };
 
-  const handlePasteFromClipboard = async () => {
-    try {
-      const items = await navigator.clipboard.read();
-      for (const item of items) {
-        const imageType = item.types.find((t) => t.startsWith("image/"));
-        if (imageType) {
-          const blob = await item.getType(imageType);
-          const file = new File([blob], "pasted-image", { type: imageType });
-          processFile(file);
-          return;
+  // Listen for paste events globally (works on iOS via long-press → Paste)
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      if (image) return; // already have an image
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) {
+            e.preventDefault();
+            processFile(file);
+            return;
+          }
         }
       }
-      showToast("No image found in clipboard");
-    } catch {
-      showToast("Could not access clipboard");
-    }
-  };
+    };
+    document.addEventListener("paste", handlePaste);
+    return () => document.removeEventListener("paste", handlePaste);
+  }, [image, processFile]);
 
   const handleShare = async (platform: string, caption: string) => {
     haptic();
@@ -447,16 +450,9 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-              {/* Paste from clipboard */}
-              <button
-                onClick={handlePasteFromClipboard}
-                className="w-full mt-3 py-2.5 rounded-xl border border-slate-200 dark:border-gray-700 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-                Paste from clipboard
-              </button>
+              <p className="text-center text-xs text-slate-400 mt-2">
+                Or paste a screenshot with Ctrl+V / Cmd+V
+              </p>
             </>
           ) : (
             <div className="space-y-4 animate-fade-in">
