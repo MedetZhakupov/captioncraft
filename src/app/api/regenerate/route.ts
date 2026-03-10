@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { auth } from "@clerk/nextjs/server";
-import { getGenerationLimiter } from "@/lib/ratelimit";
+import { getRegenerateLimiter } from "@/lib/ratelimit";
 import { NextRequest, NextResponse } from "next/server";
 
 const client = new Anthropic();
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { success } = await getGenerationLimiter().limit(userId);
+  const { success } = await getRegenerateLimiter().limit(userId);
   if (!success) {
     return NextResponse.json(
       { error: "Too many requests. Please wait a moment." },

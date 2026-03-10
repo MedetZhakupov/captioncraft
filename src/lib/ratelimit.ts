@@ -3,6 +3,7 @@ import { Redis } from "@upstash/redis";
 
 let _generationLimiter: Ratelimit | null = null;
 let _checkoutLimiter: Ratelimit | null = null;
+let _regenerateLimiter: Ratelimit | null = null;
 
 function getRedis() {
   return new Redis({
@@ -20,6 +21,17 @@ export function getGenerationLimiter(): Ratelimit {
     });
   }
   return _generationLimiter;
+}
+
+export function getRegenerateLimiter(): Ratelimit {
+  if (!_regenerateLimiter) {
+    _regenerateLimiter = new Ratelimit({
+      redis: getRedis(),
+      limiter: Ratelimit.slidingWindow(5, "1 m"),
+      prefix: "ratelimit:regenerate",
+    });
+  }
+  return _regenerateLimiter;
 }
 
 export function getCheckoutLimiter(): Ratelimit {
