@@ -149,9 +149,11 @@ Respond ONLY with valid JSON in this exact format, no markdown:
 
     return NextResponse.json({ ...parsed, credits: remainingCredits });
   } catch (error) {
-    console.error("Generation error:", error);
+    const message = error instanceof Error ? error.message : String(error);
+    const stack = error instanceof Error ? error.stack : "";
+    console.error("Generation error:", message, stack);
     return NextResponse.json(
-      { error: "Failed to generate captions. Please try again." },
+      { error: `Failed to generate captions: ${message}` },
       { status: 500 }
     );
   }
