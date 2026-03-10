@@ -5,7 +5,7 @@ const INITIAL_CREDITS = 3;
 export async function getCredits(userId: string): Promise<number> {
   const client = await clerkClient();
   const user = await client.users.getUser(userId);
-  const credits = (user.privateMetadata as { credits?: number }).credits;
+  const credits = user.publicMetadata.credits as number | undefined;
   if (credits === undefined) {
     await setCredits(userId, INITIAL_CREDITS);
     return INITIAL_CREDITS;
@@ -19,7 +19,7 @@ export async function setCredits(
 ): Promise<number> {
   const client = await clerkClient();
   await client.users.updateUserMetadata(userId, {
-    privateMetadata: { credits },
+    publicMetadata: { credits },
   });
   return credits;
 }
