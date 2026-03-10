@@ -148,16 +148,18 @@ Respond ONLY with valid JSON in this exact format, no markdown:
     redis.incr("stats:generations").catch(() => {});
 
     return NextResponse.json({ ...parsed, credits: remainingCredits });
-  } catch (error) {
-    let message = "Unknown error";
-    if (error instanceof Anthropic.APIError) {
-      message = `${error.status}: ${JSON.stringify(error.error)}`;
-    } else if (error instanceof Error) {
-      message = error.message;
-    }
+  } catch (error: unknown) {
+    const err = error as Record<string, unknown>;
+    const message = JSON.stringify({
+      message: err?.message,
+      status: err?.status,
+      error: err?.error,
+      type: err?.type,
+      name: err?.name,
+    });
     console.error("Generation error:", message);
     return NextResponse.json(
-      { error: `Failed to generate captions: ${message}` },
+      { error: `Generation failed: ${message}` },
       { status: 500 }
     );
   }
