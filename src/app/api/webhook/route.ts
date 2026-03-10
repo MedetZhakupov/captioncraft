@@ -1,38 +1,63 @@
-import { stripe } from "@/lib/stripe";
 import { addCredits } from "@/lib/credits";
 import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
+
+// Use a separate Stripe instance with fetch for webhook verification
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  httpClient: Stripe.createFetchHttpClient(),
+});
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
   const signature = req.headers.get("stripe-signature");
 
   if (!signature) {
+    console.error("Webhook: No stripe-signature header");
     return NextResponse.json({ error: "No signature" }, { status: 400 });
   }
 
+  if (!process.env.STRIPE_WEBHOOK_SECRET) {
+    console.error("Webhook: STRIPE_WEBHOOK_SECRET not set");
+    return NextResponse.json({ error: "Server config error" }, { status: 500 });
+  }
+
+  let event: Stripe.Event;
   try {
-    const event = stripe.webhooks.constructEvent(
+    event = stripe.webhooks.constructEvent(
       body,
       signature,
-      process.env.STRIPE_WEBHOOK_SECRET!
+      process.env.STRIPE_WEBHOOK_SECRET
     );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Unknown";
+    console.error(`Webhook signature verification failed: ${msg}`);
+    return NextResponse.json(
+      { error: `Signature verification failed: ${msg}` },
+      { status: 400 }
+    );
+  }
 
+  try {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
       const userId = session.metadata?.userId;
       const credits = parseInt(session.metadata?.credits || "0", 10);
 
+      console.log(`Webhook: checkout.session.completed — userId=${userId}, credits=${credits}`);
+
       if (userId && credits > 0) {
         await addCredits(userId, credits);
-        console.log(
-          `Added ${credits} credits to user ${userId} (session: ${session.id})`
-        );
+        console.log(`Webhook: Added ${credits} credits to user ${userId}`);
+      } else {
+        console.error(`Webhook: Missing userId or credits in metadata`);
       }
     }
 
     return NextResponse.json({ received: true });
   } catch (error) {
-    console.error("Webhook error:", error);
-    return NextResponse.json({ error: "Webhook failed" }, { status: 400 });
+    const msg = error instanceof Error ? error.message : "Unknown";
+    console.error(`Webhook processing error: ${msg}`);
+    return NextResponse.json({ error: `Processing failed: ${msg}` }, { status: 500 });
   }
 }
+
