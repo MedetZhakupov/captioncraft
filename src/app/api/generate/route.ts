@@ -149,9 +149,13 @@ Respond ONLY with valid JSON in this exact format, no markdown:
 
     return NextResponse.json({ ...parsed, credits: remainingCredits });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const stack = error instanceof Error ? error.stack : "";
-    console.error("Generation error:", message, stack);
+    let message = "Unknown error";
+    if (error instanceof Anthropic.APIError) {
+      message = `${error.status}: ${JSON.stringify(error.error)}`;
+    } else if (error instanceof Error) {
+      message = error.message;
+    }
+    console.error("Generation error:", message);
     return NextResponse.json(
       { error: `Failed to generate captions: ${message}` },
       { status: 500 }
