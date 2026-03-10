@@ -188,35 +188,16 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-gray-950 dark:to-gray-900">
       {/* Header */}
       <header className="sticky top-0 z-50 backdrop-blur-md bg-white/70 dark:bg-gray-950/70 border-b border-slate-200 dark:border-gray-800">
-        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-          <h1 className="text-lg font-bold tracking-tight">
-            <span className="bg-gradient-to-r from-violet-600 to-pink-500 bg-clip-text text-transparent">
-              CaptionCraft
-            </span>
-          </h1>
-          <div className="flex items-center gap-3">
+        <div className="max-w-2xl mx-auto px-4 py-2.5 space-y-2">
+          {/* Top row: Logo + User */}
+          <div className="flex items-center justify-between">
+            <h1 className="text-lg font-bold tracking-tight">
+              <span className="bg-gradient-to-r from-violet-600 to-pink-500 bg-clip-text text-transparent">
+                CaptionCraft
+              </span>
+            </h1>
             {isSignedIn ? (
-              <>
-                {credits !== null && (
-                  <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-gray-800 rounded-full px-3 py-1.5 text-sm font-medium">
-                    <span className="text-amber-500">&#9733;</span>
-                    <span>{credits} credits</span>
-                  </div>
-                )}
-                <Link
-                  href="/history"
-                  className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-medium transition-colors"
-                >
-                  History
-                </Link>
-                <button
-                  onClick={() => setShowPricing(true)}
-                  className="text-xs bg-violet-600 hover:bg-violet-700 text-white rounded-full px-3 py-1.5 font-medium transition-colors"
-                >
-                  + Buy credits
-                </button>
-                <UserButton />
-              </>
+              <UserButton />
             ) : (
               <SignInButton mode="modal">
                 <button className="text-sm bg-violet-600 hover:bg-violet-700 text-white rounded-full px-4 py-2 font-medium transition-colors">
@@ -225,6 +206,30 @@ export default function Home() {
               </SignInButton>
             )}
           </div>
+          {/* Bottom row: Credits + Actions (signed in only) */}
+          {isSignedIn && (
+            <div className="flex items-center gap-2">
+              {credits !== null && (
+                <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-gray-800 rounded-full px-3 py-1 text-xs font-medium">
+                  <span className="text-amber-500">&#9733;</span>
+                  <span>{credits} credits</span>
+                </div>
+              )}
+              <div className="flex-1" />
+              <Link
+                href="/history"
+                className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-medium transition-colors"
+              >
+                History
+              </Link>
+              <button
+                onClick={() => setShowPricing(true)}
+                className="text-xs bg-violet-600 hover:bg-violet-700 text-white rounded-full px-3 py-1 font-medium transition-colors"
+              >
+                + Buy credits
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
