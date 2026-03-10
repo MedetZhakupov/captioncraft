@@ -138,10 +138,7 @@ Respond ONLY with valid JSON in this exact format, no markdown:
       })
     );
 
-    // Save to history (non-blocking — don't fail generation if history is full)
-    saveGeneration(userId, parsed.summary, parsed.captions).catch((err) =>
-      console.error("Failed to save generation history:", err)
-    );
+    await saveGeneration(userId, parsed.summary, parsed.captions);
 
     // Increment global generation counter (fire-and-forget)
     const redis = new Redis({

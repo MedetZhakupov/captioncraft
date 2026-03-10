@@ -1,4 +1,4 @@
-import { clerkClient } from "@clerk/nextjs/server";
+import { Redis } from "@upstash/redis";
 
 interface CaptionItem {
   platform: string;
@@ -13,27 +13,17 @@ export interface GenerationRecord {
   createdAt: string;
 }
 
-interface HistoryMetadata {
-  generations?: GenerationRecord[];
-}
+const MAX_HISTORY = 50;
 
-const MAX_HISTORY = 20;
-
-async function getHistory(userId: string): Promise<GenerationRecord[]> {
-  const client = await clerkClient();
-  const user = await client.users.getUser(userId);
-  const meta = user.privateMetadata as HistoryMetadata;
-  return meta.generations || [];
-}
-
-async function setHistory(
-  userId: string,
-  generations: GenerationRecord[]
-): Promise<void> {
-  const client = await clerkClient();
-  await client.users.updateUserMetadata(userId, {
-    privateMetadata: { generations },
+function getRedis() {
+  return new Redis({
+    url: process.env.UPSTASH_REDIS_REST_URL!,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN!,
   });
+}
+
+function historyKey(userId: string) {
+  return `history:${userId}`;
 }
 
 export async function saveGeneration(
@@ -41,6 +31,7 @@ export async function saveGeneration(
   summary: string,
   captions: CaptionItem[]
 ): Promise<GenerationRecord> {
+  const redis = getRedis();
   const record: GenerationRecord = {
     id: crypto.randomUUID(),
     summary,
@@ -48,11 +39,11 @@ export async function saveGeneration(
     createdAt: new Date().toISOString(),
   };
 
-  const history = await getHistory(userId);
-  history.unshift(record);
-
-  // Keep only the most recent entries
-  await setHistory(userId, history.slice(0, MAX_HISTORY));
+  const key = historyKey(userId);
+  // Prepend to list
+  await redis.lpush(key, JSON.stringify(record));
+  // Trim to max
+  await redis.ltrim(key, 0, MAX_HISTORY - 1);
 
   return record;
 }
@@ -62,22 +53,34 @@ export async function getGenerations(
   limit = 20,
   offset = 0
 ): Promise<{ generations: GenerationRecord[]; total: number }> {
-  const history = await getHistory(userId);
-  return {
-    generations: history.slice(offset, offset + limit),
-    total: history.length,
-  };
+  const redis = getRedis();
+  const key = historyKey(userId);
+
+  const total = await redis.llen(key);
+  const raw = await redis.lrange(key, offset, offset + limit - 1);
+
+  const generations = raw.map((item) =>
+    typeof item === "string" ? JSON.parse(item) : item
+  ) as GenerationRecord[];
+
+  return { generations, total };
 }
 
 export async function deleteGeneration(
   id: string,
   userId: string
 ): Promise<boolean> {
-  const history = await getHistory(userId);
-  const index = history.findIndex((g) => g.id === id);
-  if (index === -1) return false;
+  const redis = getRedis();
+  const key = historyKey(userId);
 
-  history.splice(index, 1);
-  await setHistory(userId, history);
-  return true;
+  // Find and remove the record
+  const all = await redis.lrange(key, 0, -1);
+  for (const item of all) {
+    const record = typeof item === "string" ? JSON.parse(item) : item;
+    if (record.id === id) {
+      await redis.lrem(key, 1, typeof item === "string" ? item : JSON.stringify(item));
+      return true;
+    }
+  }
+  return false;
 }
