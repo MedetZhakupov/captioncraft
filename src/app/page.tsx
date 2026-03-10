@@ -490,6 +490,8 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="max-w-2xl mx-auto px-4 py-6 flex items-center justify-center gap-4 text-xs text-slate-400">
+        <Link href="/blog" className="hover:text-slate-600 transition-colors">Blog</Link>
+        <span>·</span>
         <Link href="/terms" className="hover:text-slate-600 transition-colors">Terms</Link>
         <span>·</span>
         <Link href="/privacy" className="hover:text-slate-600 transition-colors">Privacy</Link>
