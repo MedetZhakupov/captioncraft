@@ -275,7 +275,7 @@ export default function Home() {
             <div className="text-center">
               <SignInButton mode="modal">
                 <button className="bg-gradient-to-r from-violet-600 to-pink-500 hover:from-violet-700 hover:to-pink-600 text-white rounded-xl px-8 py-3.5 font-semibold transition-all active:scale-[0.98] text-base">
-                  Get started — 5 free credits
+                  Get started — 3 free credits
                 </button>
               </SignInButton>
             </div>

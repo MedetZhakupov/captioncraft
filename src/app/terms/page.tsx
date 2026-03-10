@@ -45,7 +45,7 @@ export default function TermsPage() {
               <li>Credits are purchased via Stripe and are non-refundable.</li>
               <li>Each caption generation consumes 1 credit.</li>
               <li>Credits do not expire.</li>
-              <li>New accounts receive 5 free credits.</li>
+              <li>New accounts receive 3 free credits.</li>
               <li>Prices are in USD and may change with notice.</li>
             </ul>
           </section>

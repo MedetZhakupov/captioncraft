@@ -1,6 +1,6 @@
 import { clerkClient } from "@clerk/nextjs/server";
 
-const INITIAL_CREDITS = 5;
+const INITIAL_CREDITS = 3;
 
 export async function getCredits(userId: string): Promise<number> {
   const client = await clerkClient();
