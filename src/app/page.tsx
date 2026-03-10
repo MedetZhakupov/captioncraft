@@ -66,27 +66,6 @@ export default function Home() {
     if (navigator.vibrate) navigator.vibrate(10);
   };
 
-  // Listen for paste events globally (works on iOS via long-press → Paste)
-  useEffect(() => {
-    const handlePaste = (e: ClipboardEvent) => {
-      if (image) return; // already have an image
-      const items = e.clipboardData?.items;
-      if (!items) return;
-      for (const item of Array.from(items)) {
-        if (item.type.startsWith("image/")) {
-          const file = item.getAsFile();
-          if (file) {
-            e.preventDefault();
-            processFile(file);
-            return;
-          }
-        }
-      }
-    };
-    document.addEventListener("paste", handlePaste);
-    return () => document.removeEventListener("paste", handlePaste);
-  }, [image, processFile]);
-
   const handleShare = async (platform: string, caption: string) => {
     haptic();
     if (navigator.share) {
@@ -178,6 +157,27 @@ export default function Home() {
     };
     reader.readAsDataURL(file);
   }, []);
+
+  // Listen for paste events globally (works on iOS via long-press → Paste)
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      if (image) return;
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) {
+            e.preventDefault();
+            processFile(file);
+            return;
+          }
+        }
+      }
+    };
+    document.addEventListener("paste", handlePaste);
+    return () => document.removeEventListener("paste", handlePaste);
+  }, [image, processFile]);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
