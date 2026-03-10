@@ -1,11 +1,21 @@
 import { auth } from "@clerk/nextjs/server";
 import { stripe, CREDIT_PACKAGES } from "@/lib/stripe";
+import { getCheckoutLimiter } from "@/lib/ratelimit";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Rate limit
+  const { success } = await getCheckoutLimiter().limit(userId);
+  if (!success) {
+    return NextResponse.json(
+      { error: "Too many requests. Please wait a moment." },
+      { status: 429 }
+    );
   }
 
   try {
