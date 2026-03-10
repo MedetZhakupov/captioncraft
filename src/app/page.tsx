@@ -58,15 +58,21 @@ export default function Home() {
       .catch(() => setCredits(0));
   }, [isSignedIn, user]);
 
-  // Refresh credits after Stripe redirect
+  // Refresh credits after Stripe redirect (retry to allow webhook time to process)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("purchased")) {
-      // Re-fetch credits from server (webhook may have already added them)
-      fetch("/api/credits")
-        .then((res) => res.json())
-        .then((data) => setCredits(data.credits));
       window.history.replaceState({}, "", "/");
+
+      const fetchCredits = () =>
+        fetch("/api/credits")
+          .then((res) => res.json())
+          .then((data) => setCredits(data.credits));
+
+      // Fetch immediately, then retry after 2s and 5s to catch webhook delay
+      fetchCredits();
+      setTimeout(fetchCredits, 2000);
+      setTimeout(fetchCredits, 5000);
     }
     if (params.get("canceled")) {
       window.history.replaceState({}, "", "/");
