@@ -138,7 +138,10 @@ Respond ONLY with valid JSON in this exact format, no markdown:
       })
     );
 
-    await saveGeneration(userId, parsed.summary, parsed.captions);
+    // Save to history (non-blocking — don't fail generation if history is full)
+    saveGeneration(userId, parsed.summary, parsed.captions).catch((err) =>
+      console.error("Failed to save generation history:", err)
+    );
 
     // Increment global generation counter (fire-and-forget)
     const redis = new Redis({
@@ -148,18 +151,10 @@ Respond ONLY with valid JSON in this exact format, no markdown:
     redis.incr("stats:generations").catch(() => {});
 
     return NextResponse.json({ ...parsed, credits: remainingCredits });
-  } catch (error: unknown) {
-    const err = error as Record<string, unknown>;
-    const message = JSON.stringify({
-      message: err?.message,
-      status: err?.status,
-      error: err?.error,
-      type: err?.type,
-      name: err?.name,
-    });
-    console.error("Generation error:", message);
+  } catch (error) {
+    console.error("Generation error:", error);
     return NextResponse.json(
-      { error: `Generation failed: ${message}` },
+      { error: "Failed to generate captions. Please try again." },
       { status: 500 }
     );
   }

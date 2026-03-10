@@ -17,7 +17,7 @@ interface HistoryMetadata {
   generations?: GenerationRecord[];
 }
 
-const MAX_HISTORY = 50;
+const MAX_HISTORY = 20;
 
 async function getHistory(userId: string): Promise<GenerationRecord[]> {
   const client = await clerkClient();
