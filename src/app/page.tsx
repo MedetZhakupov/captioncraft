@@ -208,9 +208,9 @@ export default function Home() {
           </div>
           {/* Bottom row: Credits + Actions (signed in only) */}
           {isSignedIn && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               {credits !== null && (
-                <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-gray-800 rounded-full px-3 py-1 text-xs font-medium">
+                <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-gray-800 rounded-full px-3.5 py-1.5 text-sm font-medium">
                   <span className="text-amber-500">&#9733;</span>
                   <span>{credits} credits</span>
                 </div>
@@ -218,13 +218,13 @@ export default function Home() {
               <div className="flex-1" />
               <Link
                 href="/history"
-                className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-medium transition-colors"
+                className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-medium transition-colors px-2 py-1.5"
               >
                 History
               </Link>
               <button
                 onClick={() => setShowPricing(true)}
-                className="text-xs bg-violet-600 hover:bg-violet-700 text-white rounded-full px-3 py-1 font-medium transition-colors"
+                className="text-sm bg-violet-600 hover:bg-violet-700 text-white rounded-full px-4 py-1.5 font-medium transition-colors"
               >
                 + Buy credits
               </button>
