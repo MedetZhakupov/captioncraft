@@ -1,13 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { auth } from "@clerk/nextjs/server";
-import { deductCredit } from "@/lib/credits";
-import { saveGeneration } from "@/lib/db";
 import { getGenerationLimiter } from "@/lib/ratelimit";
 import { NextRequest, NextResponse } from "next/server";
 
 const client = new Anthropic();
 
-const PLATFORMS = ["Instagram", "LinkedIn", "TikTok", "Twitter/X", "Facebook"];
 const VALID_TONES = ["professional", "casual", "witty", "bold", "inspirational"];
 
 const TONE_INSTRUCTIONS: Record<string, string> = {
@@ -24,7 +21,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Rate limit
   const { success } = await getGenerationLimiter().limit(userId);
   if (!success) {
     return NextResponse.json(
@@ -34,11 +30,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { image, mediaType, tone } = await req.json();
+    const { image, mediaType, platform, tone } = await req.json();
 
-    if (!image || !mediaType) {
+    if (!image || !mediaType || !platform) {
       return NextResponse.json(
-        { error: "Image and media type are required" },
+        { error: "Image, media type, and platform are required" },
         { status: 400 }
       );
     }
@@ -46,20 +42,9 @@ export async function POST(req: NextRequest) {
     const selectedTone = VALID_TONES.includes(tone) ? tone : "casual";
     const toneInstruction = TONE_INSTRUCTIONS[selectedTone];
 
-    // Deduct credit before generation (fails if 0 credits)
-    let remainingCredits: number;
-    try {
-      remainingCredits = await deductCredit(userId);
-    } catch {
-      return NextResponse.json(
-        { error: "No credits remaining. Please purchase more." },
-        { status: 402 }
-      );
-    }
-
     const response = await client.messages.create({
       model: "claude-sonnet-4-20250514",
-      max_tokens: 1500,
+      max_tokens: 400,
       messages: [
         {
           role: "user",
@@ -74,27 +59,19 @@ export async function POST(req: NextRequest) {
             },
             {
               type: "text",
-              text: `You are a social media expert. Analyze this screenshot and generate one optimized caption for each of these platforms: ${PLATFORMS.join(", ")}.
+              text: `You are a social media expert. Analyze this screenshot and generate ONE optimized caption for ${platform}.
 
 Tone: ${toneInstruction}
 
-Each caption must:
-- Match the platform's style and character norms while maintaining the requested tone
-- Include relevant hashtags where appropriate (Instagram, TikTok)
+The caption must:
+- Match ${platform}'s style and character norms while maintaining the requested tone
+- Include relevant hashtags where appropriate
 - Be engaging, authentic, and ready to copy-paste
 - Capture the key message/vibe of the screenshot
+- Be DIFFERENT from a typical caption — give a fresh, creative alternative
 
-Respond ONLY with valid JSON in this exact format, no markdown:
-{
-  "captions": [
-    { "platform": "Instagram", "caption": "...", "charCount": 0 },
-    { "platform": "LinkedIn", "caption": "...", "charCount": 0 },
-    { "platform": "TikTok", "caption": "...", "charCount": 0 },
-    { "platform": "Twitter/X", "caption": "...", "charCount": 0 },
-    { "platform": "Facebook", "caption": "...", "charCount": 0 }
-  ],
-  "summary": "One sentence describing what the image shows"
-}`,
+Respond ONLY with valid JSON, no markdown:
+{ "platform": "${platform}", "caption": "...", "charCount": 0 }`,
             },
           ],
         },
@@ -105,21 +82,13 @@ Respond ONLY with valid JSON in this exact format, no markdown:
       response.content[0].type === "text" ? response.content[0].text : "";
 
     const parsed = JSON.parse(text);
+    parsed.charCount = parsed.caption.length;
 
-    parsed.captions = parsed.captions.map(
-      (c: { platform: string; caption: string }) => ({
-        ...c,
-        charCount: c.caption.length,
-      })
-    );
-
-    await saveGeneration(userId, parsed.summary, parsed.captions);
-
-    return NextResponse.json({ ...parsed, credits: remainingCredits });
+    return NextResponse.json(parsed);
   } catch (error) {
-    console.error("Generation error:", error);
+    console.error("Regenerate error:", error);
     return NextResponse.json(
-      { error: "Failed to generate captions. Please try again." },
+      { error: "Failed to regenerate caption. Please try again." },
       { status: 500 }
     );
   }

@@ -26,6 +26,14 @@ const PLATFORM_CONFIG: Record<
   Facebook: { icon: "👥", color: "from-blue-500 to-blue-700", maxChars: 63206 },
 };
 
+const TONES = [
+  { id: "casual", label: "Casual", icon: "💬" },
+  { id: "professional", label: "Professional", icon: "💎" },
+  { id: "witty", label: "Witty", icon: "😏" },
+  { id: "bold", label: "Bold", icon: "🔥" },
+  { id: "inspirational", label: "Inspirational", icon: "✨" },
+];
+
 const CREDIT_PACKAGES = [
   { id: "10_credits", credits: 10, price: 299, label: "10 credits", popular: false },
   { id: "50_credits", credits: 50, price: 999, label: "50 credits", popular: true },
@@ -44,7 +52,15 @@ export default function Home() {
   const [dragActive, setDragActive] = useState(false);
   const [showPricing, setShowPricing] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+  const [tone, setTone] = useState("casual");
+  const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const showToast = (message: string) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 2000);
+  };
 
   // Fetch credits from server when signed in
   useEffect(() => {
@@ -153,6 +169,7 @@ export default function Home() {
         body: JSON.stringify({
           image: imageFile.base64,
           mediaType: imageFile.mediaType,
+          tone,
         }),
       });
 
@@ -171,10 +188,56 @@ export default function Home() {
     }
   };
 
+  const handleRegenerate = async (platform: string, index: number) => {
+    if (!imageFile || regeneratingIndex !== null) return;
+
+    setRegeneratingIndex(index);
+    try {
+      const res = await fetch("/api/regenerate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          image: imageFile.base64,
+          mediaType: imageFile.mediaType,
+          platform,
+          tone,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Regeneration failed");
+      }
+
+      const data = await res.json();
+      setResult((prev) => {
+        if (!prev) return prev;
+        const updated = [...prev.captions];
+        updated[index] = { platform: data.platform, caption: data.caption, charCount: data.charCount };
+        return { ...prev, captions: updated };
+      });
+      showToast(`${platform} caption refreshed`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Regeneration failed");
+    } finally {
+      setRegeneratingIndex(null);
+    }
+  };
+
   const copyToClipboard = async (text: string, index: number) => {
     await navigator.clipboard.writeText(text);
     setCopiedIndex(index);
+    showToast("Copied to clipboard!");
     setTimeout(() => setCopiedIndex(null), 2000);
+  };
+
+  const copyAll = async () => {
+    if (!result) return;
+    const allText = result.captions
+      .map((c) => `--- ${c.platform} ---\n${c.caption}`)
+      .join("\n\n");
+    await navigator.clipboard.writeText(allText);
+    showToast("All captions copied!");
   };
 
   const reset = () => {
@@ -186,6 +249,15 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-gray-950 dark:to-gray-900">
+      {/* Toast */}
+      {toast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] animate-fade-in">
+          <div className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-medium px-4 py-2.5 rounded-full shadow-lg">
+            {toast}
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="sticky top-0 z-50 backdrop-blur-md bg-white/70 dark:bg-gray-950/70 border-b border-slate-200 dark:border-gray-800">
         <div className="max-w-2xl mx-auto px-4 py-2.5 space-y-2">
@@ -353,6 +425,29 @@ export default function Home() {
                 </button>
               </div>
 
+              {/* Tone Selector */}
+              {!result && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Tone</p>
+                  <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+                    {TONES.map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => setTone(t.id)}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                          tone === t.id
+                            ? "bg-violet-600 text-white shadow-sm"
+                            : "bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-gray-700"
+                        }`}
+                      >
+                        <span>{t.icon}</span>
+                        <span>{t.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Generate Button */}
               {!result && (
                 <button
@@ -388,6 +483,28 @@ export default function Home() {
                   )}
                 </button>
               )}
+
+              {/* Loading Skeleton */}
+              {loading && (
+                <div className="mt-2 space-y-3">
+                  {Object.entries(PLATFORM_CONFIG).map(([name, config]) => (
+                    <div
+                      key={name}
+                      className="rounded-xl border border-slate-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-900"
+                    >
+                      <div className={`bg-gradient-to-r ${config.color} px-4 py-2 flex items-center gap-2`}>
+                        <span className="text-white text-sm">{config.icon}</span>
+                        <span className="text-white font-medium text-sm">{name}</span>
+                      </div>
+                      <div className="p-4 space-y-2.5">
+                        <div className="h-3.5 bg-slate-100 dark:bg-gray-800 rounded-full animate-pulse w-full" />
+                        <div className="h-3.5 bg-slate-100 dark:bg-gray-800 rounded-full animate-pulse w-5/6" />
+                        <div className="h-3.5 bg-slate-100 dark:bg-gray-800 rounded-full animate-pulse w-4/6" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -402,17 +519,29 @@ export default function Home() {
           {result && (
             <div className="mt-6 space-y-3 animate-fade-in">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-slate-500">{result.summary}</p>
-                <button
-                  onClick={reset}
-                  className="text-sm text-violet-600 hover:text-violet-700 font-medium"
-                >
-                  New image
-                </button>
+                <p className="text-sm text-slate-500 flex-1 mr-3">{result.summary}</p>
+                <div className="flex items-center gap-3 shrink-0">
+                  <button
+                    onClick={copyAll}
+                    className="text-sm text-violet-600 hover:text-violet-700 font-medium flex items-center gap-1"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    Copy all
+                  </button>
+                  <button
+                    onClick={reset}
+                    className="text-sm text-slate-400 hover:text-slate-600 font-medium"
+                  >
+                    New image
+                  </button>
+                </div>
               </div>
 
               {result.captions.map((cap, i) => {
                 const config = PLATFORM_CONFIG[cap.platform];
+                const isRegenerating = regeneratingIndex === i;
                 return (
                   <div
                     key={cap.platform}
@@ -431,30 +560,42 @@ export default function Home() {
                         {config?.maxChars ? `/${config.maxChars}` : ""} chars
                       </span>
                     </div>
-                    <div className="p-4">
+                    <div className={`p-4 ${isRegenerating ? "opacity-50" : ""} transition-opacity`}>
                       <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-700 dark:text-slate-300">
                         {cap.caption}
                       </p>
-                      <button
-                        onClick={() => copyToClipboard(cap.caption, i)}
-                        className="mt-3 flex items-center gap-1.5 text-xs font-medium text-violet-600 hover:text-violet-700 transition-colors"
-                      >
-                        {copiedIndex === i ? (
-                          <>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            Copied!
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                            </svg>
-                            Copy caption
-                          </>
-                        )}
-                      </button>
+                      <div className="mt-3 flex items-center gap-4">
+                        <button
+                          onClick={() => copyToClipboard(cap.caption, i)}
+                          className="flex items-center gap-1.5 text-xs font-medium text-violet-600 hover:text-violet-700 transition-colors"
+                        >
+                          {copiedIndex === i ? (
+                            <>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                              Copied!
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                              </svg>
+                              Copy
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => handleRegenerate(cap.platform, i)}
+                          disabled={isRegenerating || regeneratingIndex !== null}
+                          className="flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors disabled:opacity-50"
+                        >
+                          <svg className={`w-4 h-4 ${isRegenerating ? "animate-spin" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          {isRegenerating ? "Refreshing..." : "Refresh"}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
