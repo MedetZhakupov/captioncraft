@@ -450,7 +450,7 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-              <p className="text-center text-xs text-slate-400 mt-2">
+              <p className="text-center text-xs text-slate-400 mt-2 hidden sm:block">
                 Or paste a screenshot with Ctrl+V / Cmd+V
               </p>
             </>
