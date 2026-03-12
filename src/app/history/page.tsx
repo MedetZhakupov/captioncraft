@@ -74,7 +74,7 @@ export default function HistoryPage() {
   };
 
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr + "Z");
+    const date = new Date(dateStr);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
