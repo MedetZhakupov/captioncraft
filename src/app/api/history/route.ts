@@ -1,11 +1,20 @@
 import { auth } from "@clerk/nextjs/server";
 import { getGenerations, deleteGeneration } from "@/lib/db";
+import { getReadLimiter } from "@/lib/ratelimit";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { success } = await getReadLimiter().limit(userId);
+  if (!success) {
+    return NextResponse.json(
+      { error: "Too many requests. Please wait a moment." },
+      { status: 429 }
+    );
   }
 
   const url = new URL(req.url);

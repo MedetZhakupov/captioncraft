@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     const msg = err instanceof Error ? err.message : "Unknown";
     console.error(`Webhook signature verification failed: ${msg}`);
     return NextResponse.json(
-      { error: `Signature verification failed: ${msg}` },
+      { error: "Signature verification failed" },
       { status: 400 }
     );
   }
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Unknown";
     console.error(`Webhook processing error: ${msg}`);
-    return NextResponse.json({ error: `Processing failed: ${msg}` }, { status: 500 });
+    return NextResponse.json({ error: "Processing failed" }, { status: 500 });
   }
 }
 
