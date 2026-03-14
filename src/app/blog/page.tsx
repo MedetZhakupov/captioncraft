@@ -47,6 +47,19 @@ export default function BlogPage() {
 
       <main className="max-w-2xl mx-auto px-4 py-8 pb-24">
         <div className="space-y-4">
+          {/* CTA banner */}
+          <div className="p-4 rounded-xl bg-gradient-to-r from-violet-50 to-pink-50 dark:from-violet-950/20 dark:to-pink-950/20 border border-violet-200 dark:border-violet-800 flex items-center justify-between gap-4">
+            <p className="text-sm text-slate-700 dark:text-slate-300">
+              Generate captions for all 5 platforms in seconds.
+            </p>
+            <Link
+              href="/"
+              className="shrink-0 bg-gradient-to-r from-violet-600 to-pink-500 hover:from-violet-700 hover:to-pink-600 text-white rounded-xl px-4 py-2 font-semibold transition-all text-sm"
+            >
+              Try free
+            </Link>
+          </div>
+
           {posts.map((post) => (
             <Link
               key={post.slug}

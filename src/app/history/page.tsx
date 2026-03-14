@@ -222,6 +222,19 @@ export default function HistoryPage() {
               );
             })}
 
+            {/* CTA to generate more */}
+            <div className="p-4 rounded-xl bg-gradient-to-r from-violet-50 to-pink-50 dark:from-violet-950/20 dark:to-pink-950/20 border border-violet-200 dark:border-violet-800 text-center space-y-2">
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Ready for more captions?
+              </p>
+              <Link
+                href="/"
+                className="inline-block bg-gradient-to-r from-violet-600 to-pink-500 hover:from-violet-700 hover:to-pink-600 text-white rounded-xl px-6 py-2.5 font-semibold transition-all active:scale-[0.98] text-sm"
+              >
+                Generate new captions
+              </Link>
+            </div>
+
             {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex items-center justify-between pt-4">
