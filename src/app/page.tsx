@@ -359,45 +359,33 @@ export default function Home() {
       <main className="max-w-2xl mx-auto px-4 py-6 pb-24">
         {/* Sign-in prompt for unauthenticated users */}
         {!isSignedIn && (
-          <div className="mt-8 space-y-6">
-            <div className="grid grid-cols-5 gap-2 text-center">
-              {Object.entries(PLATFORM_CONFIG).map(([name, config]) => (
-                <div key={name} className="space-y-1">
-                  <div className="text-2xl">{config.icon}</div>
-                  <p className="text-[10px] text-slate-400 font-medium">{name}</p>
-                </div>
-              ))}
-            </div>
-            <div className="space-y-3 text-center">
-              <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200">
-                One screenshot. Five platforms.
+          <div className="space-y-8">
+            {/* Hero — above the fold */}
+            <div className="mt-6 space-y-5 text-center">
+              <h2 className="text-2xl font-extrabold text-slate-800 dark:text-slate-200 leading-tight">
+                Screenshot to captions<br />in seconds
               </h2>
-              <p className="text-sm text-slate-500 max-w-sm mx-auto">
-                Upload any product screenshot, content, or moment — get
-                copy-paste captions tailored for each social platform in seconds.
+              <p className="text-base text-slate-500 max-w-sm mx-auto">
+                Upload any image — get ready-to-post captions for Instagram, TikTok, LinkedIn, Twitter/X & Facebook.
               </p>
+              <div className="space-y-2.5">
+                <SignInButton mode="modal">
+                  <button className="w-full bg-gradient-to-r from-violet-600 to-pink-500 hover:from-violet-700 hover:to-pink-600 text-white rounded-xl px-8 py-4 font-semibold transition-all active:scale-[0.98] text-base">
+                    Try free — no card required
+                  </button>
+                </SignInButton>
+                <p className="text-xs text-slate-400">
+                  3 free credits included
+                  {totalGenerations !== null && totalGenerations > 0 && (
+                    <span> · {totalGenerations.toLocaleString()}+ captions generated</span>
+                  )}
+                </p>
+              </div>
             </div>
-            <div className="grid grid-cols-3 gap-3 text-center text-sm">
-              {[
-                { n: "1", t: "Upload", d: "Drop any screenshot" },
-                { n: "2", t: "Generate", d: "AI crafts 5 captions" },
-                { n: "3", t: "Post", d: "Copy & paste anywhere" },
-              ].map((step) => (
-                <div
-                  key={step.n}
-                  className="p-3 rounded-xl bg-slate-50 dark:bg-gray-800/50"
-                >
-                  <div className="w-6 h-6 mx-auto rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-600 text-xs font-bold flex items-center justify-center mb-2">
-                    {step.n}
-                  </div>
-                  <p className="font-semibold text-slate-700 dark:text-slate-300">{step.t}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">{step.d}</p>
-                </div>
-              ))}
-            </div>
-            {/* Sample Output */}
+
+            {/* Sample Output — show the product */}
             <div className="space-y-2">
-              <p className="text-xs font-medium text-slate-400 text-center">Example output</p>
+              <p className="text-xs font-medium text-slate-400 text-center">See it in action</p>
               <div className="rounded-xl border border-slate-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-900">
                 <div className="bg-gradient-to-r from-pink-500 to-purple-500 px-4 py-2 flex items-center justify-between">
                   <span className="text-white font-medium text-sm flex items-center gap-2">
@@ -428,17 +416,33 @@ export default function Home() {
               <p className="text-[11px] text-slate-400 text-center">+ LinkedIn, TikTok, and Facebook captions</p>
             </div>
 
-            <div className="text-center space-y-3">
+            {/* How it works */}
+            <div className="grid grid-cols-3 gap-3 text-center text-sm">
+              {[
+                { n: "1", t: "Upload", d: "Any screenshot" },
+                { n: "2", t: "Generate", d: "AI writes 5 captions" },
+                { n: "3", t: "Post", d: "Copy & paste" },
+              ].map((step) => (
+                <div
+                  key={step.n}
+                  className="p-3 rounded-xl bg-slate-50 dark:bg-gray-800/50"
+                >
+                  <div className="w-6 h-6 mx-auto rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-600 text-xs font-bold flex items-center justify-center mb-2">
+                    {step.n}
+                  </div>
+                  <p className="font-semibold text-slate-700 dark:text-slate-300">{step.t}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{step.d}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Second CTA */}
+            <div className="text-center">
               <SignInButton mode="modal">
-                <button className="bg-gradient-to-r from-violet-600 to-pink-500 hover:from-violet-700 hover:to-pink-600 text-white rounded-xl px-8 py-3.5 font-semibold transition-all active:scale-[0.98] text-base">
-                  Get started — 3 free credits
+                <button className="w-full bg-gradient-to-r from-violet-600 to-pink-500 hover:from-violet-700 hover:to-pink-600 text-white rounded-xl px-8 py-4 font-semibold transition-all active:scale-[0.98] text-base">
+                  Get started free
                 </button>
               </SignInButton>
-              {totalGenerations !== null && totalGenerations > 0 && (
-                <p className="text-xs text-slate-400">
-                  {totalGenerations.toLocaleString()}+ captions generated
-                </p>
-              )}
             </div>
           </div>
         )}
