@@ -136,7 +136,7 @@ export default function Home() {
         }
       })
       .catch(() => {});
-  }, [isSignedIn]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isSignedIn]);
 
   // Refresh credits after Stripe redirect (retry to allow webhook time to process)
   useEffect(() => {
@@ -877,7 +877,7 @@ export default function Home() {
                   </p>
                   <div className="flex items-center gap-2 mt-2">
                     <div className="flex-1 bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-slate-600 dark:text-slate-400 truncate">
-                      {typeof window !== "undefined" ? `${window.location.origin}/?ref=${referralCode}` : `captioncraft.co/?ref=${referralCode}`}
+                      {`captioncraft.co/?ref=${referralCode}`}
                     </div>
                     <button
                       onClick={async () => {
