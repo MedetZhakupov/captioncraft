@@ -484,7 +484,7 @@ export default function Home() {
         )}
 
         {/* Upload & Generation — available to all users */}
-        {(<>
+        <>
           {/* Upload Area */}
           {!image && !result ? (
             <>
@@ -588,6 +588,7 @@ export default function Home() {
             <div className="space-y-4 animate-fade-in">
               {/* Image Preview */}
               <div className="relative rounded-2xl overflow-hidden bg-slate-100 dark:bg-gray-800">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={image || undefined}
                   alt="Uploaded screenshot"
@@ -963,7 +964,6 @@ export default function Home() {
             </div>
           )}
         </>
-        )}
       </main>
 
       {/* Footer */}
