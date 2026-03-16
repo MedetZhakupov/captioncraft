@@ -1,5 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
-import { stripe, CREDIT_PACKAGES } from "@/lib/stripe";
+import { getStripe, CREDIT_PACKAGES } from "@/lib/stripe";
 import { getCheckoutLimiter } from "@/lib/ratelimit";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid package" }, { status: 400 });
     }
 
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
         {

@@ -1,11 +1,7 @@
 import { addCredits } from "@/lib/credits";
 import { NextRequest, NextResponse } from "next/server";
+import { getStripe } from "@/lib/stripe";
 import Stripe from "stripe";
-
-// Use a separate Stripe instance with fetch for webhook verification
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  httpClient: Stripe.createFetchHttpClient(),
-});
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
@@ -23,7 +19,7 @@ export async function POST(req: NextRequest) {
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(
+    event = getStripe().webhooks.constructEvent(
       body,
       signature,
       process.env.STRIPE_WEBHOOK_SECRET

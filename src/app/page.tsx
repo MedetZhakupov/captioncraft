@@ -56,6 +56,9 @@ export default function Home() {
   const [totalGenerations, setTotalGenerations] = useState<number | null>(null);
   const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [showSignInGate, setShowSignInGate] = useState(false);
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [referralCopied, setReferralCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const showToast = (message: string) => {
@@ -83,12 +86,11 @@ export default function Home() {
 
   // Fetch total generation count for social proof
   useEffect(() => {
-    if (isSignedIn) return; // only show on landing page
     fetch("/api/stats")
       .then((res) => res.json())
       .then((data) => setTotalGenerations(data.generations))
       .catch(() => {});
-  }, [isSignedIn]);
+  }, []);
 
   // Fetch credits from server when signed in
   useEffect(() => {
@@ -101,6 +103,40 @@ export default function Home() {
       .then((data) => setCredits(data.credits))
       .catch(() => setCredits(0));
   }, [isSignedIn, user]);
+
+  // Fetch referral code when signed in
+  useEffect(() => {
+    if (!isSignedIn) return;
+    fetch("/api/referral")
+      .then((res) => res.json())
+      .then((data) => setReferralCode(data.code))
+      .catch(() => {});
+  }, [isSignedIn]);
+
+  // Redeem referral code from URL param when user signs in
+  useEffect(() => {
+    if (!isSignedIn) return;
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("ref");
+    if (!ref) return;
+    window.history.replaceState({}, "", window.location.pathname);
+    fetch("/api/referral", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: ref }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          showToast("Referral bonus! +5 credits added");
+          // Refresh credits
+          fetch("/api/credits")
+            .then((r) => r.json())
+            .then((d) => setCredits(d.credits));
+        }
+      })
+      .catch(() => {});
+  }, [isSignedIn]);
 
   // Refresh credits after Stripe redirect (retry to allow webhook time to process)
   useEffect(() => {
@@ -201,7 +237,10 @@ export default function Home() {
 
   const handleGenerate = async () => {
     if (!imageFile) return;
-    if (!isSignedIn) return;
+    if (!isSignedIn) {
+      setShowSignInGate(true);
+      return;
+    }
     if (credits !== null && credits <= 0) {
       setError("No credits remaining. Add more credits to continue.");
       return;
@@ -296,6 +335,7 @@ export default function Home() {
     setImageFile(null);
     setResult(null);
     setError(null);
+    setShowSignInGate(false);
   };
 
   return (
@@ -375,7 +415,7 @@ export default function Home() {
                   </button>
                 </SignInButton>
                 <p className="text-xs text-slate-400">
-                  3 free credits included
+                  5 free credits included
                   {totalGenerations !== null && totalGenerations > 0 && (
                     <span> · {totalGenerations.toLocaleString()}+ captions generated</span>
                   )}
@@ -436,21 +476,17 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Second CTA */}
-            <div className="text-center">
-              <SignInButton mode="modal">
-                <button className="w-full bg-gradient-to-r from-violet-600 to-pink-500 hover:from-violet-700 hover:to-pink-600 text-white rounded-xl px-8 py-4 font-semibold transition-all active:scale-[0.98] text-base">
-                  Get started free
-                </button>
-              </SignInButton>
+            {/* Try it now — upload area for unauth users */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-slate-400 text-center">Or try it yourself</p>
             </div>
           </div>
         )}
 
-        {/* Authenticated content */}
-        {isSignedIn && (<>
+        {/* Upload & Generation — available to all users */}
+        <>
           {/* Upload Area */}
-          {!image ? (
+          {!image && !result ? (
             <>
               <div
                 className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all ${
@@ -552,8 +588,9 @@ export default function Home() {
             <div className="space-y-4 animate-fade-in">
               {/* Image Preview */}
               <div className="relative rounded-2xl overflow-hidden bg-slate-100 dark:bg-gray-800">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={image}
+                  src={image || undefined}
                   alt="Uploaded screenshot"
                   className="w-full max-h-72 object-contain"
                 />
@@ -589,7 +626,7 @@ export default function Home() {
               )}
 
               {/* Generate Button */}
-              {!result && (
+              {!result && !showSignInGate && (
                 <button
                   onClick={handleGenerate}
                   disabled={loading || (credits !== null && credits <= 0)}
@@ -618,8 +655,10 @@ export default function Home() {
                       </svg>
                       Analyzing & Crafting...
                     </span>
-                  ) : (
+                  ) : isSignedIn ? (
                     `Generate Captions (1 credit)`
+                  ) : (
+                    `Generate Captions — Free`
                   )}
                 </button>
               )}
@@ -648,6 +687,24 @@ export default function Home() {
             </div>
           )}
 
+          {/* Zero credits upsell — shown inline when user has no credits */}
+          {isSignedIn && credits === 0 && !result && image && !loading && (
+            <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-violet-50 to-pink-50 dark:from-violet-950/30 dark:to-pink-950/30 border border-violet-200 dark:border-violet-800 text-center space-y-3">
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                You&apos;re out of credits!
+              </p>
+              <p className="text-xs text-slate-500">
+                Add more credits to generate captions for this image.
+              </p>
+              <button
+                onClick={() => setShowPricing(true)}
+                className="w-full py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-violet-600 to-pink-500 hover:from-violet-700 hover:to-pink-600 transition-all active:scale-[0.98] text-sm"
+              >
+                Buy credits to continue
+              </button>
+            </div>
+          )}
+
           {/* Error */}
           {error && (
             <div className="mt-4 p-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm">
@@ -669,6 +726,25 @@ export default function Home() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                     </svg>
                     Copy all
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!result) return;
+                      const body = result.captions
+                        .map((c) => `--- ${c.platform} ---\n${c.caption}`)
+                        .join("\n\n");
+                      const subject = `My CaptionCraft captions: ${result.summary}`;
+                      window.open(
+                        `mailto:${user?.primaryEmailAddress?.emailAddress || ""}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,
+                        "_blank"
+                      );
+                    }}
+                    className="text-sm text-slate-400 hover:text-slate-600 font-medium flex items-center gap-1"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    Email
                   </button>
                   <button
                     onClick={reset}
@@ -775,11 +851,55 @@ export default function Home() {
                 </div>
                 <p className="text-[11px] text-slate-400 mt-2">Selecting a new tone will let you re-generate (1 credit)</p>
               </div>
+
+              {/* Low credits nudge */}
+              {isSignedIn && credits !== null && credits > 0 && credits <= 2 && (
+                <div className="flex items-center justify-between p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+                  <p className="text-sm text-amber-700 dark:text-amber-400">
+                    {credits === 1 ? "1 credit remaining" : `${credits} credits remaining`}
+                  </p>
+                  <button
+                    onClick={() => setShowPricing(true)}
+                    className="text-sm font-medium text-violet-600 hover:text-violet-700 whitespace-nowrap ml-3"
+                  >
+                    Buy more
+                  </button>
+                </div>
+              )}
+
+              {/* Referral share */}
+              {isSignedIn && referralCode && (
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-gray-800/50 border border-slate-200 dark:border-gray-700 space-y-2">
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Love CaptionCraft? Share it & earn credits
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Give a friend 5 free credits. You get 5 when they sign up.
+                  </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className="flex-1 bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-slate-600 dark:text-slate-400 truncate">
+                      {`captioncraft.co/?ref=${referralCode}`}
+                    </div>
+                    <button
+                      onClick={async () => {
+                        const url = `${window.location.origin}/?ref=${referralCode}`;
+                        await navigator.clipboard.writeText(url);
+                        setReferralCopied(true);
+                        showToast("Referral link copied!");
+                        setTimeout(() => setReferralCopied(false), 2000);
+                      }}
+                      className="shrink-0 px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium transition-colors"
+                    >
+                      {referralCopied ? "Copied!" : "Copy"}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
           {/* Empty state for signed-in users */}
-          {!image && (
+          {isSignedIn && !image && (
             <div className="mt-8 space-y-6">
               <div className="grid grid-cols-5 gap-2 text-center">
                 {Object.entries(PLATFORM_CONFIG).map(([name, config]) => (
@@ -800,8 +920,50 @@ export default function Home() {
               </div>
             </div>
           )}
+
+          {/* Sign-in gate — shown when unauth user tries to generate */}
+          {showSignInGate && !isSignedIn && (
+            <div className="mt-6 space-y-3 animate-fade-in">
+              <div className="relative">
+                {/* Blurred fake results */}
+                <div className="space-y-3 select-none" aria-hidden="true">
+                  {Object.entries(PLATFORM_CONFIG).map(([name, config]) => (
+                    <div
+                      key={name}
+                      className="rounded-xl border border-slate-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-900 blur-[6px]"
+                    >
+                      <div className={`bg-gradient-to-r ${config.color} px-4 py-2 flex items-center gap-2`}>
+                        <span className="text-white text-sm">{config.icon}</span>
+                        <span className="text-white font-medium text-sm">{name}</span>
+                      </div>
+                      <div className="p-4 space-y-2">
+                        <p className="text-sm text-slate-700 dark:text-slate-300">
+                          Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Sign-in overlay */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-2xl p-6 shadow-xl text-center max-w-sm mx-4">
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">
+                      Your captions are ready!
+                    </h3>
+                    <p className="text-sm text-slate-500 mb-4">
+                      Sign in to reveal your 5 platform-optimized captions. You get 5 free credits — no card required.
+                    </p>
+                    <SignInButton mode="modal">
+                      <button className="w-full bg-gradient-to-r from-violet-600 to-pink-500 hover:from-violet-700 hover:to-pink-600 text-white rounded-xl px-6 py-3 font-semibold transition-all active:scale-[0.98] text-base">
+                        Sign in to see captions
+                      </button>
+                    </SignInButton>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </>
-        )}
       </main>
 
       {/* Footer */}
@@ -883,6 +1045,11 @@ export default function Home() {
 
             <p className="text-[11px] text-slate-400 text-center mt-4">
               Secure payment via Stripe. Credits never expire.
+              {totalGenerations !== null && totalGenerations > 0 && (
+                <span className="block mt-1">
+                  {totalGenerations.toLocaleString()}+ captions generated by creators like you.
+                </span>
+              )}
             </p>
           </div>
         </div>
