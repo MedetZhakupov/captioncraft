@@ -104,6 +104,15 @@ export default function Home() {
       .catch(() => setCredits(0));
   }, [isSignedIn, user]);
 
+  // Auto-generate after sign-in if user had uploaded an image before signing in
+  useEffect(() => {
+    if (isSignedIn && showSignInGate && imageFile) {
+      setShowSignInGate(false);
+      // Trigger generation now that the user is signed in
+      handleGenerate();
+    }
+  }, [isSignedIn]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Fetch referral code when signed in
   useEffect(() => {
     if (!isSignedIn) return;
