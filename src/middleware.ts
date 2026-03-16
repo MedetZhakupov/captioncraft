@@ -7,6 +7,9 @@ const isPublicRoute = createRouteMatcher([
   "/terms",
   "/privacy",
   "/blog(.*)",
+  "/icon",
+  "/apple-icon",
+  "/opengraph-image",
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
