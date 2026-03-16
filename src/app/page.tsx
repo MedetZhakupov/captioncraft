@@ -106,10 +106,27 @@ export default function Home() {
 
   // Auto-generate after sign-in if user had uploaded an image before signing in
   useEffect(() => {
-    if (isSignedIn && showSignInGate && imageFile) {
+    if (!isSignedIn) return;
+
+    // Case 1: modal sign-in (component state survived)
+    if (showSignInGate && imageFile) {
       setShowSignInGate(false);
-      // Trigger generation now that the user is signed in
       handleGenerate();
+      return;
+    }
+
+    // Case 2: OAuth redirect (component state was lost, restore from sessionStorage)
+    try {
+      const pending = sessionStorage.getItem("pendingUpload");
+      if (!pending) return;
+      sessionStorage.removeItem("pendingUpload");
+      const { dataUrl, base64, mediaType, tone: savedTone } = JSON.parse(pending);
+      setImage(dataUrl);
+      setImageFile({ base64, mediaType });
+      if (savedTone) setTone(savedTone);
+      setShowSignInGate(false);
+    } catch {
+      // Ignore parse errors
     }
   }, [isSignedIn]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -248,6 +265,15 @@ export default function Home() {
     if (!imageFile) return;
     if (!isSignedIn) {
       setShowSignInGate(true);
+      // Persist upload to sessionStorage so it survives OAuth redirects
+      try {
+        sessionStorage.setItem(
+          "pendingUpload",
+          JSON.stringify({ dataUrl: image, base64: imageFile.base64, mediaType: imageFile.mediaType, tone })
+        );
+      } catch {
+        // sessionStorage full or unavailable — non-critical
+      }
       return;
     }
     if (credits !== null && credits <= 0) {
@@ -345,6 +371,7 @@ export default function Home() {
     setResult(null);
     setError(null);
     setShowSignInGate(false);
+    try { sessionStorage.removeItem("pendingUpload"); } catch {}
   };
 
   return (
